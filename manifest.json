@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "DOM Element Watcher",
+    "name": "Yahtzee Scraper",
     "version": "1.0",
     "description": "Scrape data from Cardgames.io's Yahtzee game.",
     "permissions": [
