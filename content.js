@@ -1,7 +1,9 @@
-console.log("Content script loaded.")
+console.log("Content script loaded. Downloading games...")
 
+// Running game history
 let checkpointHistory = []
 
+// Constants
 const storageKey = "yahtzeeCheckpoints"
 const downloadFilename = "yahtzeeCheckpoints"
 
@@ -13,7 +15,24 @@ chrome.storage.local.get([storageKey], (result) => {
     console.log("Existing checkpoint histories: ", result[storageKey])
 })
 
+/**
+ * Append some data to some array in Chrome's storage. 
+ */
+function appendToStorageArray(key, array) {
+    chrome.storage.local.get([key], (result) => {
+        let existingArray = result[key] || []
 
+        existingArray = existingArray.concat(array)
+
+        chrome.storage.local.set({ [key]: existingArray }, () => {
+            console.log("Array updated successfully:", existingArray)
+        })
+    })
+}
+
+/**
+ * Log a snapshot of the scorecard.
+ */
 function logCheckpoint(table) {
     const tableRows = table.querySelectorAll('tr')
     let checkpoint = []
@@ -31,21 +50,14 @@ function logCheckpoint(table) {
     console.log("Logged checkpoint ", checkpoint)
 }
 
-function appendToStorageArray(key, array) {
-    chrome.storage.local.get([key], (result) => {
-        let existingArray = result[key] || []
-
-        existingArray = existingArray.concat(array)
-
-        chrome.storage.local.set({ [key]: existingArray }, () => {
-            console.log("Array updated successfully:", existingArray)
-        })
-    })
-}
-
+/**
+ * Download all snapshots saved by this extension.
+ */
 function downloadCheckpointHistories() {
     chrome.storage.local.get([storageKey], (result) => {
-        histories = result[storageKey]
+        let histories = result[storageKey]
+
+        console.log(result[storageKey])
         csvHistories = histories.map(row => row.join(',')).join('\n');
 
         const blob = new Blob([csvHistories], { type: "text/csv;charset=utf-8;" });
@@ -59,6 +71,9 @@ function downloadCheckpointHistories() {
     })
 }
 
+/**
+ * A callback that triggers a whole-game commit.
+ */
 function saveCallback() {
     if (checkpointHistory.length > 0) {
         let totalNode = document.querySelector(totalSelector)
@@ -82,6 +97,9 @@ function saveCallback() {
     }
 }
 
+/**
+ * A callback that triggers a checkpoint log.
+ */
 function checkpointCallback(mutationsList) {
     for (const mutation of mutationsList) {
         let messageNode = document.querySelector(messageSelector)
@@ -95,6 +113,9 @@ function checkpointCallback(mutationsList) {
     }
 }
 
+/**
+ * Attach to all elements from some selector, triggering some callback.
+ */
 function observeTarget(selector, callback) {
     let targetNode = document.querySelector(selector)
 
@@ -115,18 +136,6 @@ function observeTarget(selector, callback) {
         console.warn("Target element not found. Watching for DOM changes...")
         waitForTarget(selector)
     }
-}
-
-function waitForTarget(selector) {
-    const observer = new MutationObserver(() => {
-        let targetNode = document.querySelector(selector)
-        if (targetNode) {
-            observer.disconnect()
-            observeTarget()
-        }
-    })
-
-    observer.observe(document.body, { childList: true, subtree: true })
 }
 
 observeTarget(messageSelector, checkpointCallback)
